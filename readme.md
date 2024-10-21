@@ -1,4 +1,4 @@
-# ETL Framework
+# Tiny ETL framework
 
 This framework provides an easy way to create ETL (Extract, Transform, Load) pipelines with support for asynchronous operations. It also includes helpers to combine readers and writers, offering flexibility in how you process and manage data.
 
@@ -19,6 +19,30 @@ This framework provides an easy way to create ETL (Extract, Transform, Load) pip
 
 ## Installation
 
+To add the Tiny ETL library to your project, use the following dependency declarations:
+
+### Maven
+
+Add the following dependency to your `pom.xml`:
+
+```xml
+<dependency>
+    <groupId>io.github.averude</groupId>
+    <artifactId>tiny-etl</artifactId>
+    <version>0.0.1</version>
+</dependency>
+```
+
+### Gradle
+
+For Gradle, include the following implementation in your `build.gradle`:
+
+```groovy
+implementation 'io.github.averude:tiny-etl:0.0.1'
+```
+
+## Usage
+
 To use this ETL framework, include the relevant classes and interfaces in your project. The framework includes the following:
 
 - `ETLBuilder`: To construct ETL pipelines.
@@ -27,8 +51,6 @@ To use this ETL framework, include the relevant classes and interfaces in your p
 - `ETLWriter`: Functional interface for writing data.
 - `ETLExecutorBuilder`: For executing the pipeline after all steps are configured.
 - `ETLCombiners`: Utilities to combine multiple readers and writers.
-
-## Usage
 
 ### 1. Reading Data
 
