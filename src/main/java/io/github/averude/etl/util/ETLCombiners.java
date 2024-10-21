@@ -6,6 +6,7 @@ import io.github.averude.etl.writer.ETLWriter;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
+import java.util.stream.Stream;
 
 /**
  * Utility class for combining multiple ETLReaders and ETLWriters.
@@ -101,8 +102,38 @@ public final class ETLCombiners {
     public static <T> ETLWriter<T> combine(ETLWriter<T> writer1,
                                            ETLWriter<T> writer2) {
         return (value) -> writer1.write(value)
-                .thenCompose(v1 -> writer2.write(value)
-                        .thenApply(v2 -> v2));
+                .thenCompose(v1 -> writer2.write(value));
+    }
+
+    /**
+     * Combines multiple ETLWriters sequentially, writing the same data to each writer in the order they are provided.
+     *
+     * <p>This method takes a variable number of ETLWriters and ensures that the data is written to each writer
+     * one after the other. The result of each write operation is chained, meaning that the next write will not
+     * begin until the previous one has completed.</p>
+     *
+     * @param <T>     The type of data to write.
+     * @param writers  The ETLWriters to combine. At least two writers must be provided.
+     * @return A new ETLWriter that writes data to all specified writers in sequence.
+     * @throws IllegalArgumentException if fewer than two writers are provided.
+     */
+    @SafeVarargs
+    public static <T> ETLWriter<T> combine(ETLWriter<T> ... writers) {
+        if (writers.length < 2) {
+            throw new IllegalArgumentException("At least two writers are required");
+        }
+
+        return (value) -> {
+            var completableFuture = writers[0].write(value);
+
+            for (int i = 1; i < writers.length; i++) {
+                var nextWriter = writers[i];
+                completableFuture = completableFuture
+                        .thenCompose(v1 -> nextWriter.write(value));
+            }
+
+            return completableFuture;
+        };
     }
 
     /**
@@ -116,6 +147,27 @@ public final class ETLCombiners {
     public static <T> ETLWriter<T> combineParallel(ETLWriter<T> writer1,
                                                    ETLWriter<T> writer2) {
         return (value) -> CompletableFuture.allOf(writer1.write(value), writer2.write(value))
+                .thenApply(unused -> value);
+    }
+
+    /**
+     * Combines multiple ETLWriters in parallel, writing the same data to all.
+     *
+     * @param <T>     The type of data to write.
+     * @param writers  The ETLWriters to combine.
+     * @return A new ETLWriter that writes data to all writers in parallel.
+     * @throws IllegalArgumentException if fewer than two writers are provided.
+     */
+    @SafeVarargs
+    public static <T> ETLWriter<T> combineParallel(ETLWriter<T> ... writers) {
+        if (writers.length < 2) {
+            throw new IllegalArgumentException("At least two writers are required");
+        }
+
+        return (value) -> CompletableFuture
+                .allOf(Stream.of(writers)
+                        .map(writer -> writer.write(value))
+                        .toArray(CompletableFuture[]::new))
                 .thenApply(unused -> value);
     }
 }
