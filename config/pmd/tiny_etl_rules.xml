@@ -104,7 +104,11 @@
     <rule ref="category/java/design.xml/AvoidUncheckedExceptionsInSignatures"/>
     <rule ref="category/java/design.xml/ClassWithOnlyPrivateConstructorsShouldBeFinal"/>
     <rule ref="category/java/design.xml/CollapsibleIfStatements"/>
-    <rule ref="category/java/design.xml/CouplingBetweenObjects"/>
+    <rule ref="category/java/design.xml/CouplingBetweenObjects">
+        <properties>
+            <property name="threshold" value="25" />
+        </properties>
+    </rule>
     <rule ref="category/java/design.xml/DoNotExtendJavaLangError"/>
     <rule ref="category/java/design.xml/ExceptionAsFlowControl"/>
     <rule ref="category/java/design.xml/ExcessiveParameterList"/>

@@ -29,7 +29,7 @@ Add the following dependency to your `pom.xml`:
 <dependency>
     <groupId>io.github.averude</groupId>
     <artifactId>tiny-etl</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ Add the following dependency to your `pom.xml`:
 For Gradle, include the following implementation in your `build.gradle`:
 
 ```groovy
-implementation 'io.github.averude:tiny-etl:0.0.1'
+implementation 'io.github.averude:tiny-etl:0.0.2'
 ```
 
 ## Usage
