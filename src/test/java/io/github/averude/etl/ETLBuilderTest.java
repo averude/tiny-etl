@@ -3,6 +3,7 @@ package io.github.averude.etl;
 import lombok.Data;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -18,7 +19,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -132,6 +135,27 @@ class ETLBuilderTest {
 
         assertEquals(expectedResult, firstResultHolder.getResult());
         assertEquals(expectedResult, secondResultHolder.getResult());
+    }
+
+    @Test
+    void executeEtlWithException_doesNotExecuteDownstreamOperations() {
+        Repository<String> mockRepository = mock(Repository.class);
+
+        when(mockRepository.read()).thenReturn(HELLO);
+
+        var builder = new ETLBuilder()
+                .read(createReader(() -> new ArrayList<Integer>()))
+                .chain(createReader((list -> list.get(100))))
+                .chain(createReader(item -> mockRepository.read()))
+                .map(String::hashCode)
+                .chain(createReader((s -> s + "!")))
+                .write(createWriter(mockRepository::write));
+
+        var exception = assertThrows(CompletionException.class, builder::execute);
+        assertEquals(exception.getCause().getClass(), IndexOutOfBoundsException.class);
+
+        verify(mockRepository, never()).read();
+        verify(mockRepository, never()).write(any());
     }
 
     @Test
