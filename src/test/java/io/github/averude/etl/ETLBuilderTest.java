@@ -38,6 +38,24 @@ class ETLBuilderTest {
     }
 
     @Test
+    void executeChainedCombinedReadWithAccumulation() {
+        new ETLBuilder()
+                .read(createReader(() -> HELLO_WORLD))
+                .chain(
+                        combine(
+                                createReader(s -> "Best wishes!"),
+                                createReader(s -> "Good luck!"),
+                                (v1, v2) -> v1 + " " + v2
+                        ),
+                        (v1, v2) -> v1 + "! " + v2
+                )
+                .write(createWriter(result -> {
+                    assertEquals(HELLO_WORLD + "! Best wishes! Good luck!", result);
+                }))
+                .execute();
+    }
+
+    @Test
     void executeSimpleETLWithMap() {
         new ETLBuilder()
                 .read(createReader(() -> HELLO))

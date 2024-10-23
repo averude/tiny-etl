@@ -5,6 +5,7 @@ import io.github.averude.etl.reader.ETLReader;
 import io.github.averude.etl.writer.ETLWriter;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -52,6 +53,27 @@ public class ETLBuilder {
          */
         public <R> ETLReaderBuilder<R> chain(ETLChainedReader<T, R> chainedReader) {
             return new ETLReaderBuilder<>(() -> reader.read().thenCompose(chainedReader::read));
+        }
+
+        /**
+         * Chains another reader to the ETL pipeline, allowing for a two-step transformation.
+         * The result from the current reader is passed to the chained reader, and both the original
+         * data and the result from the chained reader are used to produce a final transformed result.
+         *
+         * @param <R1>           The type of data produced by the chained reader.
+         * @param <R2>           The type of the final transformed data.
+         * @param chainedReader  The ETLChainedReader to be executed after the current reader,
+         *                       which processes the output of the current reader.
+         * @param accumulator     A BiFunction that takes the original data and the result
+         *                       from the chained reader, producing a combined result of type R2.
+         * @return A new ETLReaderBuilder with the final transformed data type R2, allowing
+         *         further transformations or execution configuration to be applied.
+         */
+        public <R1, R2> ETLReaderBuilder<R2> chain(ETLChainedReader<T, R1> chainedReader,
+                                                   BiFunction<T, R1, R2> accumulator) {
+            return new ETLReaderBuilder<>(() -> reader.read()
+                    .thenCompose(t -> chainedReader.read(t)
+                            .thenApply(r1 -> accumulator.apply(t, r1))));
         }
 
         /**
