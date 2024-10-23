@@ -3,6 +3,7 @@ package io.github.averude.etl;
 import io.github.averude.etl.reader.ETLChainedReader;
 import io.github.averude.etl.reader.ETLReader;
 import io.github.averude.etl.writer.ETLWriter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
@@ -12,6 +13,7 @@ import java.util.function.Function;
 /**
  * ETLBuilder class serves as the entry point for building an ETL (Extract, Transform, Load) pipeline.
  */
+@Slf4j
 public class ETLBuilder {
 
     /**
@@ -22,6 +24,7 @@ public class ETLBuilder {
      * @return An ETLReaderBuilder that allows further transformation of the data.
      */
     public <T> ETLReaderBuilder<T> read(ETLReader<T> reader) {
+        log.trace("Created builder with reader");
         return new ETLReaderBuilder<>(reader);
     }
 
@@ -30,6 +33,7 @@ public class ETLBuilder {
      *
      * @param <T> The type of data being read and transformed.
      */
+    @Slf4j
     public static final class ETLReaderBuilder<T> {
 
         private final ETLReader<T> reader;
@@ -52,7 +56,11 @@ public class ETLBuilder {
          * @return A new ETLReaderBuilder with the chained reader's result type.
          */
         public <R> ETLReaderBuilder<R> chain(ETLChainedReader<T, R> chainedReader) {
-            return new ETLReaderBuilder<>(() -> reader.read().thenCompose(chainedReader::read));
+            log.trace("Adding chained read operation");
+            return new ETLReaderBuilder<>(() -> reader.read().thenCompose(t -> {
+                log.debug("Calling next reader");
+                return chainedReader.read(t);
+            }));
         }
 
         /**
@@ -71,9 +79,16 @@ public class ETLBuilder {
          */
         public <R1, R2> ETLReaderBuilder<R2> chain(ETLChainedReader<T, R1> chainedReader,
                                                    BiFunction<T, R1, R2> accumulator) {
+            log.trace("Adding chained read operation with accumulation");
             return new ETLReaderBuilder<>(() -> reader.read()
-                    .thenCompose(t -> chainedReader.read(t)
-                            .thenApply(r1 -> accumulator.apply(t, r1))));
+                    .thenCompose(t -> {
+                        log.debug("Calling next chained reader");
+                        return chainedReader.read(t)
+                                .thenApply(r1 -> {
+                                    log.debug("Applying accumulator function to readers result");
+                                    return accumulator.apply(t, r1);
+                                });
+                    }));
         }
 
         /**
@@ -84,6 +99,7 @@ public class ETLBuilder {
          * @return A new ETLReaderBuilder with the transformed data type.
          */
         public <R> ETLReaderBuilder<R> map(Function<T, R> mapper) {
+            log.trace("Adding transformation operation");
             return new ETLReaderBuilder<>(() -> reader.read().thenApply(mapper));
         }
 
@@ -94,6 +110,7 @@ public class ETLBuilder {
          * @return An ETLExecutorBuilder to further configure execution behavior.
          */
         public ETLExecutorBuilder<T> write(ETLWriter<T> writer) {
+            log.trace("Adding write operation");
             return new ETLExecutorBuilder<>(reader.read().thenCompose(writer::write));
         }
     }
@@ -124,6 +141,7 @@ public class ETLBuilder {
          * @return A new ETLExecutorBuilder with the transformed result type.
          */
         public <R> ETLExecutorBuilder<R> map(Function<T, R> mapper) {
+            log.trace("Adding transformation operation");
             return new ETLExecutorBuilder<>(future.thenApply(mapper));
         }
 
@@ -134,7 +152,9 @@ public class ETLBuilder {
          * @return A new ETLExecutorBuilder with the post-write action applied.
          */
         public ETLExecutorBuilder<T> postWrite(Consumer<T> postWrite) {
+            log.trace("Adding post write operation");
             return new ETLExecutorBuilder<>(future.thenApply((T t) -> {
+                log.debug("Calling post write operation");
                 postWrite.accept(t);
                 return t;
             }));
@@ -144,7 +164,9 @@ public class ETLBuilder {
          * Executes the ETL pipeline, blocking until completion.
          */
         public void execute() {
+            log.info("Executing ETL pipeline");
             future.join();
+            log.info("ETL pipeline successfully executed");
         }
     }
 }

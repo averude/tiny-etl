@@ -3,6 +3,7 @@ package io.github.averude.etl.util;
 import io.github.averude.etl.reader.ETLChainedReader;
 import io.github.averude.etl.reader.ETLReader;
 import io.github.averude.etl.writer.ETLWriter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
@@ -11,6 +12,7 @@ import java.util.stream.Stream;
 /**
  * Utility class for combining multiple ETLReaders and ETLWriters.
  */
+@Slf4j
 public final class ETLCombiners {
 
     private ETLCombiners() {}

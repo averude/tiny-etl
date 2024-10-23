@@ -96,7 +96,8 @@ class ETLBuilderTest {
                 .write(createWriter(unused -> {
                 }));
 
-        assertThrows(CompletionException.class, executorBuilder::execute);
+        var completionException = assertThrows(CompletionException.class, executorBuilder::execute);
+        assertEquals(completionException.getCause().getClass(), ETLUncheckedException.class);
     }
 
     @Test

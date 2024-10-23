@@ -1,6 +1,10 @@
 package io.github.averude.etl.writer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -11,6 +15,9 @@ import java.util.function.Function;
  */
 @FunctionalInterface
 public interface ETLWriter<T> {
+
+    Logger LOG = LoggerFactory.getLogger(ETLWriter.class);
+    AtomicLong WRITERS_COUNT = new AtomicLong(1);
 
     /**
      * Writes the specified data asynchronously.
@@ -35,8 +42,14 @@ public interface ETLWriter<T> {
      * @return A new ETLWriter instance that writes data using the provided consumer.
      */
     static <T> ETLWriter<T> createWriter(Consumer<T> consumer) {
+        long writerNumber = WRITERS_COUNT.getAndIncrement();
+        LOG.debug("Creating writer #{}", writerNumber);
         return (T value) -> CompletableFuture
-                .runAsync(() -> consumer.accept(value))
+                .runAsync(() -> {
+                    LOG.debug("Writer #{}: Starting write operation", writerNumber);
+                    consumer.accept(value);
+                    LOG.debug("Writer #{}: Write operation completed", writerNumber);
+                })
                 .thenApply((unused) -> value);
     }
 
@@ -51,8 +64,15 @@ public interface ETLWriter<T> {
      * @return A new ETLWriter instance that writes data using the provided function.
      */
     static <T> ETLWriter<T> createWriter(Function<T, T> consumer) {
+        long writerNumber = WRITERS_COUNT.getAndIncrement();
+        LOG.debug("Creating writer #{}", writerNumber);
         return (T value) -> CompletableFuture
-                .supplyAsync(() -> consumer.apply(value));
+                .supplyAsync(() -> {
+                    LOG.debug("Writer #{}: Starting write operation", writerNumber);
+                    T t = consumer.apply(value);
+                    LOG.debug("Writer #{}: Write operation completed", writerNumber);
+                    return t;
+                });
     }
 }
 
