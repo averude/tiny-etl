@@ -5,8 +5,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 import static io.github.averude.etl.reader.ETLChainedReader.createReader;
 import static io.github.averude.etl.reader.ETLReader.createReader;
@@ -16,6 +18,7 @@ import static io.github.averude.etl.util.ETLCombiners.combineParallel;
 import static io.github.averude.etl.writer.ETLWriter.createWriter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -355,6 +358,26 @@ class ETLBuilderTest {
                 .write(createWriter(v -> {
                     assertEquals("Hello World. Hello User!", v);
                 }));
+    }
+
+    @Test
+    void simpleETLWithStreams() {
+        new ETLBuilder()
+                .read(createReader(() -> Stream.of(1, 2, 3, 4)))
+                .chain(
+                        combine(
+                                createReader(v -> Stream.concat(v, Stream.of(5, 6, 7, 8))),
+                                createReader(v -> Stream.of(9, 10, 11, 12)),
+                                Stream::concat
+                        )
+                )
+                .map(val -> val.filter(v -> v % 2 == 0))
+                .chain(createReader(v -> Stream.concat(v, Stream.of(14, 16))))
+                .map(Stream::toList)
+                .write(createWriter(v -> {
+                    assertIterableEquals(List.of(2, 4, 6, 8, 10, 12, 14, 16), v);
+                }))
+                .execute();
     }
 
     private void sleep(long millis) {
