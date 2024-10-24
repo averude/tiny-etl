@@ -3,9 +3,12 @@ package io.github.averude.etl;
 import lombok.Data;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 import static io.github.averude.etl.reader.ETLChainedReader.createReader;
 import static io.github.averude.etl.reader.ETLReader.createReader;
@@ -15,10 +18,13 @@ import static io.github.averude.etl.util.ETLCombiners.combineParallel;
 import static io.github.averude.etl.writer.ETLWriter.createWriter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -33,6 +39,24 @@ class ETLBuilderTest {
                 .read(createReader(() -> HELLO_WORLD))
                 .write(createWriter(result -> {
                     assertEquals(HELLO_WORLD, result);
+                }))
+                .execute();
+    }
+
+    @Test
+    void executeChainedCombinedReadWithAccumulation() {
+        new ETLBuilder()
+                .read(createReader(() -> HELLO_WORLD))
+                .chain(
+                        combine(
+                                createReader(s -> "Best wishes!"),
+                                createReader(s -> "Good luck!"),
+                                (v1, v2) -> v1 + " " + v2
+                        ),
+                        (v1, v2) -> v1 + "! " + v2
+                )
+                .write(createWriter(result -> {
+                    assertEquals(HELLO_WORLD + "! Best wishes! Good luck!", result);
                 }))
                 .execute();
     }
@@ -75,7 +99,8 @@ class ETLBuilderTest {
                 .write(createWriter(unused -> {
                 }));
 
-        assertThrows(CompletionException.class, executorBuilder::execute);
+        var completionException = assertThrows(CompletionException.class, executorBuilder::execute);
+        assertEquals(completionException.getCause().getClass(), ETLUncheckedException.class);
     }
 
     @Test
@@ -114,6 +139,27 @@ class ETLBuilderTest {
 
         assertEquals(expectedResult, firstResultHolder.getResult());
         assertEquals(expectedResult, secondResultHolder.getResult());
+    }
+
+    @Test
+    void executeEtlWithException_doesNotExecuteDownstreamOperations() {
+        Repository<String> mockRepository = mock(Repository.class);
+
+        when(mockRepository.read()).thenReturn(HELLO);
+
+        var builder = new ETLBuilder()
+                .read(createReader(() -> new ArrayList<Integer>()))
+                .chain(createReader((list -> list.get(100))))
+                .chain(createReader(item -> mockRepository.read()))
+                .map(String::hashCode)
+                .chain(createReader((s -> s + "!")))
+                .write(createWriter(mockRepository::write));
+
+        var exception = assertThrows(CompletionException.class, builder::execute);
+        assertEquals(exception.getCause().getClass(), IndexOutOfBoundsException.class);
+
+        verify(mockRepository, never()).read();
+        verify(mockRepository, never()).write(any());
     }
 
     @Test
@@ -312,6 +358,26 @@ class ETLBuilderTest {
                 .write(createWriter(v -> {
                     assertEquals("Hello World. Hello User!", v);
                 }));
+    }
+
+    @Test
+    void simpleETLWithStreams() {
+        new ETLBuilder()
+                .read(createReader(() -> Stream.of(1, 2, 3, 4)))
+                .chain(
+                        combine(
+                                createReader(v -> Stream.concat(v, Stream.of(5, 6, 7, 8))),
+                                createReader(v -> Stream.of(9, 10, 11, 12)),
+                                Stream::concat
+                        )
+                )
+                .map(val -> val.filter(v -> v % 2 == 0))
+                .chain(createReader(v -> Stream.concat(v, Stream.of(14, 16))))
+                .map(Stream::toList)
+                .write(createWriter(v -> {
+                    assertIterableEquals(List.of(2, 4, 6, 8, 10, 12, 14, 16), v);
+                }))
+                .execute();
     }
 
     private void sleep(long millis) {

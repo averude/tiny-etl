@@ -1,6 +1,10 @@
 package io.github.averude.etl.reader;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -12,6 +16,10 @@ import java.util.function.Supplier;
  */
 @FunctionalInterface
 public interface ETLReader<T> {
+
+    Logger LOG = LoggerFactory.getLogger(ETLReader.class);
+    AtomicLong READERS_COUNT = new AtomicLong(1);
+
     /**
      * Reads the data asynchronously.
      * <p>
@@ -34,9 +42,15 @@ public interface ETLReader<T> {
      * @return A new ETLReader instance that reads data using the provided supplier.
      */
     static <T> ETLReader<T> createReader(Supplier<T> supplier) {
-        return () -> CompletableFuture.supplyAsync(supplier);
+        long readerNumber = READERS_COUNT.getAndIncrement();
+        LOG.debug("Creating reader #{}", readerNumber);
+        return () -> CompletableFuture.supplyAsync(() -> {
+            LOG.debug("Reader #{}: calling read function", readerNumber);
+            return supplier.get();
+        });
     }
 
+    // TODO: think about removing this reader
     /**
      * Creates an ETLReader that performs a sequential read operation, where the
      * result of the first read is passed to the second read operation.
@@ -53,9 +67,12 @@ public interface ETLReader<T> {
      */
     static <T, R> ETLReader<R> createSequentialReader(Supplier<T> firstRead,
                                                       Function<T, R> secondRead) {
+        long readerNumber = READERS_COUNT.getAndIncrement();
+        LOG.debug("Creating sequential reader #{}", readerNumber);
         return () -> CompletableFuture.supplyAsync(firstRead).thenApply(secondRead);
     }
 
+    // TODO: think about removing this reader
     /**
      * Creates an ETLReader that performs a sequential read operation, allowing
      * for the results of both the first and second reads to be merged into a final result.
@@ -75,6 +92,8 @@ public interface ETLReader<T> {
     static <T1, T2, R> ETLReader<R> createSequentialReader(Supplier<T1> firstRead,
                                                            Function<T1, T2> secondRead,
                                                            BiFunction<T1, T2, R> resultMergeFunction) {
+        long readerNumber = READERS_COUNT.getAndIncrement();
+        LOG.debug("Creating sequential reader #{}", readerNumber);
         return () -> CompletableFuture.supplyAsync(firstRead)
                 .thenCompose(t1 -> CompletableFuture.supplyAsync(() -> secondRead.apply(t1))
                         .thenApply(t2 -> resultMergeFunction.apply(t1, t2)));
