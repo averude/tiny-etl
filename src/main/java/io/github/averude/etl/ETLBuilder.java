@@ -37,7 +37,6 @@ public class ETLBuilder {
      *
      * @param <T> The type of data being read and transformed.
      */
-    @Slf4j
     public static final class ETLReaderBuilder<T> {
 
         private final Supplier<CompletableFuture<T>> futureSupplier;
