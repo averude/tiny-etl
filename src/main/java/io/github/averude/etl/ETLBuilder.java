@@ -165,6 +165,26 @@ public class ETLBuilder {
         }
 
         /**
+         * Adds a read operation to the ETL pipeline, allowing for further processing of the data.
+         * This method creates the next stage of the load process by chaining another reader that
+         * will handle the output from the current stage.
+         *
+         * @param <R>           The type of the data produced by the chained reader.
+         * @param chainedReader The ETLChainedReader to be executed after the current process,
+         *                      which processes the output of the current process.
+         * @return A new ETLReaderBuilder with the chained reader's result type, representing the
+         *         next stage in the load process.
+         */
+        public <R> ETLReaderBuilder<R> read(ETLChainedReader<T, R> chainedReader) {
+            log.trace("Adding read operation");
+            return new ETLReaderBuilder<>(() -> futureSupplier.get()
+                    .thenCompose(t -> {
+                        log.debug("Calling next reader");
+                        return chainedReader.read(t);
+                    }));
+        }
+
+        /**
          * Executes the ETL pipeline, blocking until completion.
          */
         public void execute() {

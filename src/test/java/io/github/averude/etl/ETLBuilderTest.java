@@ -1,11 +1,13 @@
 package io.github.averude.etl;
 
+import io.github.averude.etl.writer.ETLWriter;
 import lombok.Data;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
@@ -378,6 +380,26 @@ class ETLBuilderTest {
                     assertIterableEquals(List.of(2, 4, 6, 8, 10, 12, 14, 16), v);
                 }))
                 .execute();
+    }
+
+    @Test
+    void multistageRead() {
+        ETLWriter<String> writer = mock(ETLWriter.class);
+
+        when(writer.write(any())).thenAnswer(a -> CompletableFuture.completedFuture(a.getArguments()[0]));
+
+        new ETLBuilder()
+                // stage 1
+                .read(createReader(() -> HELLO))
+                .write(writer)
+                // stage 2
+                .read(createReader((v) -> v + WORLD))
+                .write(writer)
+                // execution
+                .execute();
+
+        verify(writer).write(HELLO);
+        verify(writer).write(HELLO_WORLD);
     }
 
     private void sleep(long millis) {
