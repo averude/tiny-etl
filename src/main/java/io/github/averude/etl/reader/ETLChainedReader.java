@@ -3,6 +3,7 @@ package io.github.averude.etl.reader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -40,6 +41,8 @@ public interface ETLChainedReader<T, R> {
      * @return An instance of {@link ETLChainedReader} that asynchronously processes the input data.
      */
     static <T, R> ETLChainedReader<T, R> createReader(Function<T, R> function) {
+        Objects.requireNonNull(function);
+
         long chainedReaderNumber = READERS_COUNT.getAndIncrement();
         LOG.debug("Creating chained reader #{}", chainedReaderNumber);
         return (T t) -> CompletableFuture.supplyAsync(() -> {

@@ -5,6 +5,7 @@ import io.github.averude.etl.reader.ETLReader;
 import io.github.averude.etl.writer.ETLWriter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -25,6 +26,8 @@ public class ETLBuilder {
      * @return An ETLReaderBuilder that allows further transformation of the data.
      */
     public <T> ETLReaderBuilder<T> read(ETLReader<T> reader) {
+        Objects.requireNonNull(reader);
+
         log.trace("Created builder with reader");
         return new ETLReaderBuilder<>(reader::read);
     }
@@ -58,6 +61,8 @@ public class ETLBuilder {
          * @return A new ETLReaderBuilder with the chained reader's result type.
          */
         public <R> ETLReaderBuilder<R> chain(ETLChainedReader<T, R> chainedReader) {
+            Objects.requireNonNull(chainedReader);
+
             log.trace("Adding chained read operation");
             return new ETLReaderBuilder<>(() -> futureSupplier.get()
                     .thenCompose(t -> {
@@ -82,6 +87,9 @@ public class ETLBuilder {
          */
         public <R1, R2> ETLReaderBuilder<R2> chain(ETLChainedReader<T, R1> chainedReader,
                                                    BiFunction<T, R1, R2> accumulator) {
+            Objects.requireNonNull(chainedReader);
+            Objects.requireNonNull(accumulator);
+
             log.trace("Adding chained read operation with accumulation");
             return new ETLReaderBuilder<>(() -> futureSupplier.get()
                     .thenCompose(t -> {
@@ -102,6 +110,8 @@ public class ETLBuilder {
          * @return A new ETLReaderBuilder with the transformed data type.
          */
         public <R> ETLReaderBuilder<R> map(Function<T, R> mapper) {
+            Objects.requireNonNull(mapper);
+
             log.trace("Adding transformation operation");
             return new ETLReaderBuilder<>(() -> futureSupplier.get().thenApply(mapper));
         }
@@ -113,6 +123,8 @@ public class ETLBuilder {
          * @return An ETLExecutorBuilder to further configure execution behavior.
          */
         public ETLExecutorBuilder<T> write(ETLWriter<T> writer) {
+            Objects.requireNonNull(writer);
+
             log.trace("Adding write operation");
             return new ETLExecutorBuilder<>(() -> futureSupplier.get().thenCompose(writer::write));
         }
@@ -145,6 +157,8 @@ public class ETLBuilder {
          * @return A new ETLExecutorBuilder with the transformed result type.
          */
         public <R> ETLExecutorBuilder<R> map(Function<T, R> mapper) {
+            Objects.requireNonNull(mapper);
+
             log.trace("Adding transformation operation");
             return new ETLExecutorBuilder<>(() -> futureSupplier.get().thenApply(mapper));
         }
@@ -156,6 +170,8 @@ public class ETLBuilder {
          * @return A new ETLExecutorBuilder with the post-write action applied.
          */
         public ETLExecutorBuilder<T> postWrite(Consumer<T> postWrite) {
+            Objects.requireNonNull(postWrite);
+
             log.trace("Adding post write operation");
             return new ETLExecutorBuilder<>(() -> futureSupplier.get().thenApply((T t) -> {
                 log.debug("Calling post write operation");
@@ -176,6 +192,8 @@ public class ETLBuilder {
          *         next stage in the load process.
          */
         public <R> ETLReaderBuilder<R> read(ETLChainedReader<T, R> chainedReader) {
+            Objects.requireNonNull(chainedReader);
+
             log.trace("Adding read operation");
             return new ETLReaderBuilder<>(() -> futureSupplier.get()
                     .thenCompose(t -> {

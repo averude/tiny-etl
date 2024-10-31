@@ -3,6 +3,7 @@ package io.github.averude.etl.reader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
@@ -42,6 +43,8 @@ public interface ETLReader<T> {
      * @return A new ETLReader instance that reads data using the provided supplier.
      */
     static <T> ETLReader<T> createReader(Supplier<T> supplier) {
+        Objects.requireNonNull(supplier);
+
         long readerNumber = READERS_COUNT.getAndIncrement();
         LOG.debug("Creating reader #{}", readerNumber);
         return () -> CompletableFuture.supplyAsync(() -> {
@@ -67,6 +70,9 @@ public interface ETLReader<T> {
      */
     static <T, R> ETLReader<R> createSequentialReader(Supplier<T> firstRead,
                                                       Function<T, R> secondRead) {
+        Objects.requireNonNull(firstRead);
+        Objects.requireNonNull(secondRead);
+
         long readerNumber = READERS_COUNT.getAndIncrement();
         LOG.debug("Creating sequential reader #{}", readerNumber);
         return () -> CompletableFuture.supplyAsync(firstRead).thenApply(secondRead);
@@ -92,6 +98,10 @@ public interface ETLReader<T> {
     static <T1, T2, R> ETLReader<R> createSequentialReader(Supplier<T1> firstRead,
                                                            Function<T1, T2> secondRead,
                                                            BiFunction<T1, T2, R> resultMergeFunction) {
+        Objects.requireNonNull(firstRead);
+        Objects.requireNonNull(secondRead);
+        Objects.requireNonNull(resultMergeFunction);
+
         long readerNumber = READERS_COUNT.getAndIncrement();
         LOG.debug("Creating sequential reader #{}", readerNumber);
         return () -> CompletableFuture.supplyAsync(firstRead)

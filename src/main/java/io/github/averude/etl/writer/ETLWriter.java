@@ -3,6 +3,7 @@ package io.github.averude.etl.writer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -42,6 +43,8 @@ public interface ETLWriter<T> {
      * @return A new ETLWriter instance that writes data using the provided consumer.
      */
     static <T> ETLWriter<T> createWriter(Consumer<T> consumer) {
+        Objects.requireNonNull(consumer);
+
         long writerNumber = WRITERS_COUNT.getAndIncrement();
         LOG.debug("Creating writer #{}", writerNumber);
         return (T value) -> CompletableFuture
@@ -60,16 +63,18 @@ public interface ETLWriter<T> {
      * The provided function processes the data before writing it asynchronously.
      *
      * @param <T>      The type of data to write.
-     * @param consumer The function that processes the data before writing.
+     * @param function The function that processes the data before writing.
      * @return A new ETLWriter instance that writes data using the provided function.
      */
-    static <T> ETLWriter<T> createWriter(Function<T, T> consumer) {
+    static <T> ETLWriter<T> createWriter(Function<T, T> function) {
+        Objects.requireNonNull(function);
+
         long writerNumber = WRITERS_COUNT.getAndIncrement();
         LOG.debug("Creating writer #{}", writerNumber);
         return (T value) -> CompletableFuture
                 .supplyAsync(() -> {
                     LOG.debug("Writer #{}: Starting write operation", writerNumber);
-                    T t = consumer.apply(value);
+                    T t = function.apply(value);
                     LOG.debug("Writer #{}: Write operation completed", writerNumber);
                     return t;
                 });
