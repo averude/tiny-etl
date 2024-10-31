@@ -5,6 +5,7 @@ import io.github.averude.etl.reader.ETLReader;
 import io.github.averude.etl.writer.ETLWriter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
@@ -31,6 +32,10 @@ public final class ETLCombiners {
     public static <T1, T2, R> ETLReader<R> combine(ETLReader<T1> reader1,
                                                    ETLReader<T2> reader2,
                                                    BiFunction<T1, T2, R> combineFunction) {
+        Objects.requireNonNull(reader1);
+        Objects.requireNonNull(reader2);
+        Objects.requireNonNull(combineFunction);
+
         return () -> reader1.read().
                 thenCompose(t1 -> reader2.read()
                         .thenApply(t2 -> combineFunction.apply(t1, t2)));
@@ -50,6 +55,10 @@ public final class ETLCombiners {
     public static <T1, T2, R> ETLReader<R> combineParallel(ETLReader<T1> reader1,
                                                            ETLReader<T2> reader2,
                                                            BiFunction<T1, T2, R> combineFunction) {
+        Objects.requireNonNull(reader1);
+        Objects.requireNonNull(reader2);
+        Objects.requireNonNull(combineFunction);
+
         return () -> reader1.read()
                 .thenCombineAsync(reader2.read(), combineFunction);
     }
@@ -69,6 +78,10 @@ public final class ETLCombiners {
     public static <T, R1, R2, R> ETLChainedReader<T, R> combine(ETLChainedReader<T, R1> reader1,
                                                                 ETLChainedReader<T, R2> reader2,
                                                                 BiFunction<R1, R2, R> combineFunction) {
+        Objects.requireNonNull(reader1);
+        Objects.requireNonNull(reader2);
+        Objects.requireNonNull(combineFunction);
+
         return (T t) -> reader1.read(t)
                 .thenCompose(r1 -> reader2.read(t)
                         .thenApply(r2 -> combineFunction.apply(r1, r2)));
@@ -89,6 +102,10 @@ public final class ETLCombiners {
     public static <T, R1, R2, R> ETLChainedReader<T, R> combineParallel(ETLChainedReader<T, R1> reader1,
                                                                         ETLChainedReader<T, R2> reader2,
                                                                         BiFunction<R1, R2, R> combineFunction) {
+        Objects.requireNonNull(reader1);
+        Objects.requireNonNull(reader2);
+        Objects.requireNonNull(combineFunction);
+
         return (T t) -> reader1.read(t)
                 .thenCombineAsync(reader2.read(t), combineFunction);
     }
@@ -103,6 +120,9 @@ public final class ETLCombiners {
      */
     public static <T> ETLWriter<T> combine(ETLWriter<T> writer1,
                                            ETLWriter<T> writer2) {
+        Objects.requireNonNull(writer1);
+        Objects.requireNonNull(writer2);
+
         return (value) -> writer1.write(value)
                 .thenCompose(v1 -> writer2.write(value));
     }
@@ -121,6 +141,8 @@ public final class ETLCombiners {
      */
     @SafeVarargs
     public static <T> ETLWriter<T> combine(ETLWriter<T> ... writers) {
+        Objects.requireNonNull(writers);
+
         if (writers.length < 2) {
             throw new IllegalArgumentException("At least two writers are required");
         }
@@ -148,6 +170,9 @@ public final class ETLCombiners {
      */
     public static <T> ETLWriter<T> combineParallel(ETLWriter<T> writer1,
                                                    ETLWriter<T> writer2) {
+        Objects.requireNonNull(writer1);
+        Objects.requireNonNull(writer2);
+
         return (value) -> CompletableFuture.allOf(writer1.write(value), writer2.write(value))
                 .thenApply(unused -> value);
     }
@@ -162,6 +187,8 @@ public final class ETLCombiners {
      */
     @SafeVarargs
     public static <T> ETLWriter<T> combineParallel(ETLWriter<T> ... writers) {
+        Objects.requireNonNull(writers);
+
         if (writers.length < 2) {
             throw new IllegalArgumentException("At least two writers are required");
         }

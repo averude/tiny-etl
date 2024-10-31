@@ -5,11 +5,11 @@ This framework provides an easy way to create ETL (Extract, Transform, Load) pip
 ## Table of Contents
 - [Installation](#installation)
 - [Usage](#usage)
-    - [Reading Data](#reading-data)
-    - [Chaining Readers](#chaining-readers)
-    - [Transforming Data](#transforming-data)
-    - [Writing Data](#writing-data)
-    - [Executing the Pipeline](#executing-the-pipeline)
+    - [Reading Data](#1-reading-data)
+    - [Chaining Readers](#2-chaining-readers)
+    - [Transforming Data](#3-transforming-data)
+    - [Writing Data](#4-writing-data)
+    - [Executing the Pipeline](#5-executing-the-pipeline)
 - [Combining Readers and Writers](#combining-readers-and-writers)
     - [Combining Readers](#combining-readers)
     - [Combining Writers](#combining-writers)
@@ -29,7 +29,7 @@ Add the following dependency to your `pom.xml`:
 <dependency>
     <groupId>io.github.averude</groupId>
     <artifactId>tiny-etl</artifactId>
-    <version>0.0.3</version>
+    <version>0.0.4</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ Add the following dependency to your `pom.xml`:
 For Gradle, include the following implementation in your `build.gradle`:
 
 ```groovy
-implementation 'io.github.averude:tiny-etl:0.0.3'
+implementation 'io.github.averude:tiny-etl:0.0.4'
 ```
 
 ## Usage
@@ -332,6 +332,33 @@ public class ETLExample {
                 )
                 .execute();
     }
+}
+```
+
+#### 6. Multistage ETL job
+```java
+import io.github.averude.etl.writer.ETLWriter;
+
+import static io.github.averude.etl.reader.ETLChainedReader.createReader;
+import static io.github.averude.etl.reader.ETLReader.createReader;
+import static io.github.averude.etl.writer.ETLWriter.createWriter;
+
+public class ETLExample { 
+    public static void main(String[] args) {
+        ETLWriter<String> writer = createWriter(s -> {
+            System.out.println(s);
+        });
+        
+        new ETLBuilder()
+                // stage 1
+                .read(createReader(() -> "Hello"))
+                .write(writer) // prints "Hello"
+                // stage 2
+                .read(createReader((v) -> v + " world!"))
+                .write(writer) // prints "Hello world!"
+                // execution
+                .execute();
+  }
 }
 ```
 
