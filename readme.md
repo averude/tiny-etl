@@ -335,6 +335,33 @@ public class ETLExample {
 }
 ```
 
+#### 6. Multistage ETL job
+```java
+import io.github.averude.etl.writer.ETLWriter;
+
+import static io.github.averude.etl.reader.ETLChainedReader.createReader;
+import static io.github.averude.etl.reader.ETLReader.createReader;
+import static io.github.averude.etl.writer.ETLWriter.createWriter;
+
+public class ETLExample { 
+    public static void main(String[] args) {
+        ETLWriter<String> writer = createWriter(s -> {
+            System.out.println(s);
+        });
+        
+        new ETLBuilder()
+                // stage 1
+                .read(createReader(() -> "Hello"))
+                .write(writer) // prints "Hello"
+                // stage 2
+                .read(createReader((v) -> v + " world!"))
+                .write(writer) // prints "Hello world!"
+                // execution
+                .execute();
+  }
+}
+```
+
 ## Contributing
 
 Contributions are welcome! Feel free to submit a pull request or open an issue.
